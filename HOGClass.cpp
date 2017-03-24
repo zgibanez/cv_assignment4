@@ -53,8 +53,35 @@ void HOG::setCellDimensions()
 	cout << "CELL WIDTH = " << cellWidth << " CELL HEIGHT = " << cellHeight << endl;
 }
 
-Mat HOG::getHOG(Point pixel_center, Mat image)
+Mat HOG::getHOG(Mat image)
 {
+	//Resize image so it fits with the planned window dimension
+	Mat imageCopy = image.clone();
+	resize(imageCopy, imageCopy, Size(DET_WINDOW_W, DET_WINDOW_H));
+	imshow("RESIZED IMAGE", imageCopy);
+	waitKey(0);
+
+
+	//Define a <vector<vector>> Mat containing all cells descriptors in an x,y manner 
+	vector<vector<Mat>> cellHistograms(CELL_NUMBER_X, vector<Mat>(CELL_NUMBER_Y));
+
+	//Define a rectangle which will contain the image cell
+	Rect cellCrop;
+
+	//Step 1: Get the HOG of every cell
+	for (int i = 0; i < CELL_NUMBER_X; i++)
+	{
+		for (int j = 0; j < CELL_NUMBER_Y; j++)
+		{
+			cellCrop = Rect(i*cellWidth, j*cellHeight, cellWidth, cellHeight);
+			cellHistograms[i][j] = getCellHistogram(imageCopy(cellCrop));
+			cout << "CELL HISTOGRAM OF " << i << " , " << j << " " << cellHistograms[i][j] << endl;
+		}
+	}
+
+	//Step 2: Normalize the histograms in blocks defined in CELL_PER_BLOCK
+	vector<vector<Mat>> normalizedCellHistograms = normalizeHistograms(cellHistograms);
+
 	return Mat();
 }
 
@@ -131,17 +158,87 @@ Mat HOG::getCellHistogram(Mat cell)
 	return histogram;
 }
 
+//NOTE: ASSUMING 2x2 BLOCKS
+vector<vector<Mat>> HOG::normalizeHistograms(vector<vector<Mat>> cellHistograms)
+{
+	Mat blockHistogram;
+	vector<vector<Mat>> normalizedCells(CELL_NUMBER_X, vector<Mat>(CELL_NUMBER_Y));
+
+	for (int i = 0; i < CELL_NUMBER_X; i++)
+	{
+		for (int j = 0; j < CELL_NUMBER_Y; j++)
+		{
+			cout << "ANALYZING CELL " << i << " " << j << endl;
+			blockHistogram = cellHistograms[i][j].clone();
+
+			//If we are on the X limit take the X-1 cell
+			if (i + 1 != CELL_NUMBER_X) 
+			{
+				vconcat(blockHistogram, cellHistograms[i + 1][j].clone(), blockHistogram);
+			}
+			else
+			{
+				vconcat(blockHistogram, cellHistograms[i - 1][j], blockHistogram);
+			}
+
+			//If we are on the Y limit take the Y-1 cell
+			if (j + 1 != CELL_NUMBER_Y)
+			{
+				vconcat(blockHistogram, cellHistograms[i][j + 1], blockHistogram);
+			}
+			else
+			{
+				vconcat(blockHistogram, cellHistograms[i][j - 1], blockHistogram);
+			}
+
+			//If we are on the top-right corner take the X-1,Y+1 cell
+			if (j == 0 && i + 1 == CELL_NUMBER_X)
+			{
+				vconcat(blockHistogram, cellHistograms[i - 1][j + 1], blockHistogram);
+			}
+
+			//If we are on the bottom-left corner take the X+1, Y-1 cell
+			if (j + 1 == CELL_NUMBER_Y  && i + 1 != CELL_NUMBER_X)
+			{
+				vconcat(blockHistogram, cellHistograms[i + 1][j - 1], blockHistogram);
+			}
+
+			//If we are on the bottom-right corner take the X-1,Y-1 cell
+			if (j + 1 == CELL_NUMBER_Y && i + 1 == CELL_NUMBER_X) 
+			{
+				vconcat(blockHistogram, cellHistograms[i - 1][j - 1], blockHistogram);
+			}
+
+			//If we are not in a corner, take the X+1,Y+1 cell
+			if (j + 1 != CELL_NUMBER_Y && i + 1 != CELL_NUMBER_X)
+			{
+				vconcat(blockHistogram, cellHistograms[i + 1][j + 1], blockHistogram);
+			}
+	
+			normalize(blockHistogram,blockHistogram,1,NORM_L2);
+
+			//Take the first cell
+			blockHistogram.resize(BIN_NUMBER);
+			cout << blockHistogram << endl;
+			normalizedCells[i][j] = blockHistogram;
+		}
+	}
+
+
+	return normalizedCells;
+}
+
+
 Mat HOG::getBlockHistogram(Mat block)
 {
-	imshow("BLOCK", block);
-	waitKey(0);
+
 	// List of histograms of the cells that compose the block
 	vector<Mat> cellHistograms;
 	//Region to be cropped in the block
 	Rect cellCrop;
-	for (int i = 0; i < CELL_NUMBER_X; i++)
+	for (int i = 0; i < CELL_PER_BLOCK_X; i++)
 	{
-		for (int j = 0; j < CELL_NUMBER_Y; j++)
+		for (int j = 0; j < CELL_PER_BLOCK_Y; j++)
 		{
 			cellCrop = Rect(i*cellWidth, j*cellHeight, cellWidth, cellHeight);
 			cellHistograms.push_back(getCellHistogram(block(cellCrop)));
@@ -156,6 +253,7 @@ Mat HOG::getBlockHistogram(Mat block)
 		else vconcat(blockHistogram, cellHistograms[i], blockHistogram);
 	}
 
+	normalize(blockHistogram,blockHistogram,NORM_L2);
 	cout << blockHistogram << endl;
 	return blockHistogram;
 }

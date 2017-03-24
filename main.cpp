@@ -16,7 +16,8 @@ void main()
 
 
 	Mat cell = imread("D:/images/c1.jpg",CV_LOAD_IMAGE_GRAYSCALE);
-	hog.getBlockHistogram(cell);
+	//hog.getBlockHistogram(cell);
+	hog.getHOG(cell);
 	
 	//cell.convertTo(cell, CV_32F, 1 / 255.0);
 	Mat gx, gy;

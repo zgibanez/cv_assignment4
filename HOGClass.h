@@ -12,9 +12,13 @@
 // Number of bins in the histogram
 #define BIN_NUMBER 9
 
-// Number of cells in which a block is divided
-#define CELL_NUMBER_X 2
-#define CELL_NUMBER_Y 2
+// Number of cells in which the image is divided
+#define CELL_NUMBER_X 4
+#define CELL_NUMBER_Y 4
+
+//Number of cells per block
+#define CELL_PER_BLOCK_X 2
+#define CELL_PER_BLOCK_Y 2
 
 //Overlap percentage between blocks
 #define OVERLAP_PERCENTAGE 0.5
@@ -33,7 +37,8 @@ class HOG
 		void HOG::setCellDimensions();
 		cv::Mat HOG::getCellHistogram(cv::Mat cell);
 		cv::Mat HOG::getBlockHistogram(cv::Mat block);
-		cv::Mat HOG::getHOG(cv::Point pixel_center, cv::Mat image);
+		cv::Mat HOG::getHOG(cv::Mat image);
+		std::vector<std::vector<cv::Mat>> HOG::normalizeHistograms(std::vector<std::vector<cv::Mat>> cellHistograms);
 
 };
 
