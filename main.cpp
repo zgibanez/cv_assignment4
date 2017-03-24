@@ -9,15 +9,25 @@ using namespace cv;
 
 void main()
 {
+	string imagePath = "org/";
+	for(int i = 1 ; i <= 200 ; i++)
+	{
+		
+		Mat image = imread(imagePath + to_string(i) + ".pgm");
+		resize(image, image, Size(image.cols * 3, image.rows * 3));
+		string test = imagePath + to_string(i) + ".pgm";
+		cout << test << endl;
+		imshow("IMAGE", image);
+		waitKey(0);
+	}
+	/*
 	//Calculate gradients gx and gy
-	HOG hog;
-	hog.setBinValues();
-	hog.setCellDimensions();
+	HOG* hog = new HOG();
 
 
-	Mat cell = imread("D:/images/c1.jpg",CV_LOAD_IMAGE_GRAYSCALE);
+	Mat cell = imread("org/1.pgm",CV_LOAD_IMAGE_GRAYSCALE);
 	//hog.getBlockHistogram(cell);
-	hog.getHOG(cell);
+	hog->getHOG(cell);
 	
 	//cell.convertTo(cell, CV_32F, 1 / 255.0);
 	Mat gx, gy;
@@ -32,5 +42,6 @@ void main()
 	test = test + test2;
 	imshow("TEST",test);
 	waitKey();
+	*/
 
 }

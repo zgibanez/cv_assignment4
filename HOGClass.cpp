@@ -14,6 +14,12 @@
 using namespace std;
 using namespace cv;
 
+HOG::HOG(void)
+{
+	setBinValues();
+	setCellDimensions();
+}
+
 //Destructor
 HOG::~HOG()
 {
@@ -25,7 +31,7 @@ void HOG::setBinValues()
 {
 	//Number of degrees to divide in number of bins
 	float totalDegrees;
-	if (SIGN_HISTOGRAMS) totalDegrees = 360.0; else totalDegrees = 180.0;
+	if (HISTOGRAMS_360) totalDegrees = 360.0; else totalDegrees = 180.0;
 	float degreesPerBin = totalDegrees / BIN_NUMBER;
 
 	Mat binLimits = Mat::zeros(Size(1, BIN_NUMBER), CV_32F);
@@ -100,6 +106,25 @@ Mat HOG::getCellHistogram(Mat cell)
 	// Calculate gradient angle and magnitude
 	Mat ang, mag;
 	cartToPolar(gx, gy, mag, ang, true);
+
+	//cout << ang << endl;
+	//cout << ang.type() << endl;
+	if(!HISTOGRAMS_360) 
+	{
+		for (int i = 0; i < ang.rows; i++)
+		{
+			for (int j = 0; j < ang.cols; j++)
+			{
+				if (ang.at<float>(i, j) > 180.0f)
+				{
+					cout << ang.at<float>(i, j) << " --> ";
+					ang.at<float>(i, j) -= 180.0f;
+					cout << ang.at<float>(i,j) << endl;
+				}
+			}
+		}
+	}
+	
 
 	// Histogram Storage
 	Mat histogram = Mat::zeros(binValues.size(), CV_32F);

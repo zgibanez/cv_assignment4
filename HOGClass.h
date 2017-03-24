@@ -7,7 +7,7 @@
 #define DET_WINDOW_H 200
 
 //Are the histogram values signed or not?
-#define SIGN_HISTOGRAMS true 
+#define HISTOGRAMS_360 false 
 
 // Number of bins in the histogram
 #define BIN_NUMBER 9
@@ -32,6 +32,7 @@ class HOG
 
 	//Methods
 	public:
+		HOG();
 		virtual ~HOG();
 		void HOG::setBinValues();
 		void HOG::setCellDimensions();
