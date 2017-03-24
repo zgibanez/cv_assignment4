@@ -7,6 +7,7 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+#include <cmath>
 #include <opencv2/highgui/highgui.hpp>
 
 
@@ -81,12 +82,15 @@ Mat HOG::getHOG(Mat image)
 		{
 			cellCrop = Rect(i*cellWidth, j*cellHeight, cellWidth, cellHeight);
 			cellHistograms[i][j] = getCellHistogram(imageCopy(cellCrop));
-			cout << "CELL HISTOGRAM OF " << i << " , " << j << " " << cellHistograms[i][j] << endl;
+			//cout << "CELL HISTOGRAM OF " << i << " , " << j << " " << cellHistograms[i][j] << endl;
 		}
 	}
 
 	//Step 2: Normalize the histograms in blocks defined in CELL_PER_BLOCK
 	vector<vector<Mat>> normalizedCellHistograms = normalizeHistograms(cellHistograms);
+
+	//Step X: Draw histograms
+	drawHistograms(imageCopy, normalizedCellHistograms);
 
 	return Mat();
 }
@@ -117,9 +121,7 @@ Mat HOG::getCellHistogram(Mat cell)
 			{
 				if (ang.at<float>(i, j) > 180.0f)
 				{
-					cout << ang.at<float>(i, j) << " --> ";
 					ang.at<float>(i, j) -= 180.0f;
-					cout << ang.at<float>(i,j) << endl;
 				}
 			}
 		}
@@ -281,5 +283,40 @@ Mat HOG::getBlockHistogram(Mat block)
 	normalize(blockHistogram,blockHistogram,NORM_L2);
 	cout << blockHistogram << endl;
 	return blockHistogram;
+}
+
+void HOG::drawHistograms(Mat image, vector<vector<Mat>> histograms)
+{
+	Mat display = image.clone();
+	cvtColor(display, display, COLOR_GRAY2BGR);
+	namedWindow("HISTOGRAMS", WINDOW_NORMAL);
+	Point p1, p2;
+	float dX, dY;
+	float P = 50.0f; //to enlage arrows 
+	const float toRadians = PI / 180.0f;
+
+	for (int i = 0; i < CELL_NUMBER_X; i++)
+	{
+		for (int j = 0; j < CELL_NUMBER_Y; j++)
+		{
+			p1 = Point(i*cellWidth + cellWidth/2, j*cellHeight + cellHeight/2);
+			for (int k = 0; k < BIN_NUMBER; k++)
+			{
+				cout << "ANGLE " << binValues.at<float>(k, 0) << " : ";
+				cout << sin(binValues.at<float>(k, 0)*toRadians) << " COS " << cos(binValues.at<float>(k, 0)*toRadians) << endl;
+
+				dY = sin(binValues.at<float>(k, 0)*toRadians)*histograms[i][j].at<float>(k, 0);
+				dX = cos(binValues.at<float>(k, 0)*toRadians)*histograms[i][j].at<float>(k, 0);
+
+				cout << "DX: " << dX*20 << " DY: " << dY*20 << endl;
+				p2 = Point(i*cellWidth + cellWidth / 2 + dX*P, j*cellHeight + cellHeight / 2 + dY*P);
+				arrowedLine(display, p1, p2, Scalar(255, 0, 0));
+			}
+		}
+	}
+
+	imshow("HISTOGRAMS", display);
+	waitKey(0);
+
 }
 

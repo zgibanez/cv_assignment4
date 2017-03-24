@@ -9,7 +9,7 @@ using namespace cv;
 
 void main()
 {
-	string imagePath = "org/";
+	/*string imagePath = "org/";
 	for(int i = 1 ; i <= 200 ; i++)
 	{
 		
@@ -19,13 +19,13 @@ void main()
 		cout << test << endl;
 		imshow("IMAGE", image);
 		waitKey(0);
-	}
-	/*
+	}*/
+	
 	//Calculate gradients gx and gy
 	HOG* hog = new HOG();
 
 
-	Mat cell = imread("org/1.pgm",CV_LOAD_IMAGE_GRAYSCALE);
+	Mat cell = imread("C:/Users/pey_l/OneDrive/Imágenes/roland_geraerts_3.jpg",CV_LOAD_IMAGE_GRAYSCALE);
 	//hog.getBlockHistogram(cell);
 	hog->getHOG(cell);
 	
@@ -42,6 +42,6 @@ void main()
 	test = test + test2;
 	imshow("TEST",test);
 	waitKey();
-	*/
+	
 
 }

@@ -4,17 +4,17 @@
 
 // Window dimensions
 #define DET_WINDOW_W 500
-#define DET_WINDOW_H 200
+#define DET_WINDOW_H 300
 
 //Are the histogram values signed or not?
-#define HISTOGRAMS_360 false 
+#define HISTOGRAMS_360 true 
 
 // Number of bins in the histogram
 #define BIN_NUMBER 9
 
 // Number of cells in which the image is divided
-#define CELL_NUMBER_X 4
-#define CELL_NUMBER_Y 4
+#define CELL_NUMBER_X 8
+#define CELL_NUMBER_Y 8
 
 //Number of cells per block
 #define CELL_PER_BLOCK_X 2
@@ -22,6 +22,9 @@
 
 //Overlap percentage between blocks
 #define OVERLAP_PERCENTAGE 0.5
+
+//Other constants
+#define PI 3.14159265
 
 class HOG
 {
@@ -40,6 +43,9 @@ class HOG
 		cv::Mat HOG::getBlockHistogram(cv::Mat block);
 		cv::Mat HOG::getHOG(cv::Mat image);
 		std::vector<std::vector<cv::Mat>> HOG::normalizeHistograms(std::vector<std::vector<cv::Mat>> cellHistograms);
+
+		//Drawing
+		void HOG::drawHistograms(cv::Mat image, std::vector<std::vector<cv::Mat>> histograms);
 
 };
 
