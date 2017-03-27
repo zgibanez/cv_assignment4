@@ -10,6 +10,9 @@
 #include <cmath>
 #include <opencv2/highgui/highgui.hpp>
 
+//Drawing
+#include <opencv2/video/tracking.hpp>
+
 
 
 using namespace std;
@@ -67,7 +70,6 @@ Mat HOG::getHOG(Mat image)
 	resize(imageCopy, imageCopy, Size(DET_WINDOW_W, DET_WINDOW_H));
 	imshow("RESIZED IMAGE", imageCopy);
 	waitKey(0);
-
 
 	//Define a <vector<vector>> Mat containing all cells descriptors in an x,y manner 
 	vector<vector<Mat>> cellHistograms(CELL_NUMBER_X, vector<Mat>(CELL_NUMBER_Y));
@@ -195,7 +197,7 @@ vector<vector<Mat>> HOG::normalizeHistograms(vector<vector<Mat>> cellHistograms)
 	{
 		for (int j = 0; j < CELL_NUMBER_Y; j++)
 		{
-			cout << "ANALYZING CELL " << i << " " << j << endl;
+			//cout << "ANALYZING CELL " << i << " " << j << endl;
 			blockHistogram = cellHistograms[i][j].clone();
 
 			//If we are on the X limit take the X-1 cell
@@ -246,7 +248,7 @@ vector<vector<Mat>> HOG::normalizeHistograms(vector<vector<Mat>> cellHistograms)
 
 			//Take the first cell
 			blockHistogram.resize(BIN_NUMBER);
-			cout << blockHistogram << endl;
+			//cout << blockHistogram << endl;
 			normalizedCells[i][j] = blockHistogram;
 		}
 	}
@@ -281,7 +283,7 @@ Mat HOG::getBlockHistogram(Mat block)
 	}
 
 	normalize(blockHistogram,blockHistogram,NORM_L2);
-	cout << blockHistogram << endl;
+	//cout << blockHistogram << endl;
 	return blockHistogram;
 }
 
@@ -302,13 +304,13 @@ void HOG::drawHistograms(Mat image, vector<vector<Mat>> histograms)
 			p1 = Point(i*cellWidth + cellWidth/2, j*cellHeight + cellHeight/2);
 			for (int k = 0; k < BIN_NUMBER; k++)
 			{
-				cout << "ANGLE " << binValues.at<float>(k, 0) << " : ";
-				cout << sin(binValues.at<float>(k, 0)*toRadians) << " COS " << cos(binValues.at<float>(k, 0)*toRadians) << endl;
+				//cout << "ANGLE " << binValues.at<float>(k, 0) << " : ";
+				//cout << sin(binValues.at<float>(k, 0)*toRadians) << " COS " << cos(binValues.at<float>(k, 0)*toRadians) << endl;
 
 				dY = sin(binValues.at<float>(k, 0)*toRadians)*histograms[i][j].at<float>(k, 0);
 				dX = cos(binValues.at<float>(k, 0)*toRadians)*histograms[i][j].at<float>(k, 0);
 
-				cout << "DX: " << dX*20 << " DY: " << dY*20 << endl;
+				//cout << "DX: " << dX*20 << " DY: " << dY*20 << endl;
 				p2 = Point(i*cellWidth + cellWidth / 2 + dX*P, j*cellHeight + cellHeight / 2 + dY*P);
 				arrowedLine(display, p1, p2, Scalar(255, 0, 0));
 			}
@@ -317,6 +319,170 @@ void HOG::drawHistograms(Mat image, vector<vector<Mat>> histograms)
 
 	imshow("HISTOGRAMS", display);
 	waitKey(0);
+	destroyWindow("HISTOGRAMS");
 
 }
 
+
+// Training functions
+
+void HOG::beginTraining(string filePath)
+{
+	vector<String> fileNames;
+	vector<Mat> histogramFiles;
+
+	//Get the list of files
+	glob(filePath, fileNames);
+	Mat src;
+
+	for (size_t i = 0; i < fileNames.size(); i++)
+	{
+		src = imread(fileNames[i], IMREAD_GRAYSCALE);
+		
+		//Go to next file if this one has a problem
+		if (!src.data)
+		{
+			cout << "Cannot read " << fileNames[i] << " ... going to the next one." << endl;
+			continue;
+		}
+
+		//
+		bool abort;
+		cout << "Commencing ROI selection of file " << fileNames[i] << endl;
+		vector<Mat> ROI = getROI(src, abort);
+	}
+}
+
+// Allows the user to select rectangles from the image
+// and calculate their histograms.
+vector<Mat> HOG::getROI(Mat image, bool &abort)
+{
+
+	// Show commands
+	help();
+
+	// Flag to determine if we finished selecting ROIs
+	bool esc = false;
+
+	// Create a window to use mouse functions 
+	string window = "Select ROI(s)";
+	namedWindow(window, WINDOW_AUTOSIZE);
+
+	// Vector of rectangles
+	vector<Rect> ROIs;
+	Rect ROI = Rect();
+	setMouseCallback(window,onMouse,&ROI);
+
+	Mat imageCopy; 
+	int key;
+	for (;;)
+	{
+		//Image clone to visualize ROI
+		imageCopy = image.clone();
+		cvtColor(imageCopy, imageCopy, COLOR_GRAY2BGR);
+
+		//Visualize actual ROI
+		rectangle(imageCopy, ROI, Scalar(0, 255, 0), 2);
+
+		//Visualize previous Rects
+		if (!ROIs.empty())
+		{
+			for (size_t i = 0; i < ROIs.size(); i++)
+			{
+				rectangle(imageCopy, ROIs[i], Scalar(0, 200, 0), 2);
+			}
+		}
+		imshow(window, imageCopy);
+
+		//If user presses SPACE we will save the image
+		key = waitKey(20);
+		switch (key)
+		{
+			//No input
+			case -1:
+				continue;
+
+			//SPACE: Save ROI 
+			case 32:
+				ROIs.push_back(ROI);
+				cout << "ROI saved." << endl;
+				break;
+
+			//D: Delete previous ROI
+			case (int)('d') :
+				if (!ROIs.empty()) 
+				{
+					ROIs.pop_back();
+					cout << "Last ROI erased" << endl;
+				}
+				else cout << "There are no ROIs saved." << endl;
+				break;
+
+			//ESC: Go to next image
+			case 27 :
+				esc = true;
+				break;
+
+		}
+
+		//If ESC was pushed finish
+		if (esc) break;
+	}
+
+	// Impede any more inputs 
+	setMouseCallback(window, NULL, NULL);
+	destroyWindow(window);
+
+	// Histograms of the ROIs
+	vector<Mat> histogramsROI;
+
+	//Get the histograms of every ROI
+	for (size_t i = 0; i < ROIs.size(); i++)
+	{
+		histogramsROI.push_back(getHOG(image(ROIs[i])));
+	}
+
+	cout << "DONEZO!" << endl;
+	return histogramsROI;
+}
+
+// Function for handling mouse events
+void onMouse(int event, int x, int y, int flags, void *userdata)
+
+{
+	static bool selectedObject = false;
+	static Point origin;
+	static Point end;
+
+	if (selectedObject)
+	{
+		end = Point(x, y);
+		Rect* selection = (Rect*) userdata;
+		if (origin.x < end.x) selection->x = origin.x; else selection->x = end.x;
+		if (origin.y < end.y) selection->y = origin.y; else selection->y = end.y;
+
+		//selection->y = origin.y;
+		selection->width = abs(origin.x - end.x);
+		selection->height = abs(origin.y - end.y);
+
+	}
+
+	switch (event)
+	{
+		case EVENT_LBUTTONDOWN:
+			origin = Point(x, y);
+			selectedObject = true;
+			break;
+
+		case EVENT_LBUTTONUP:
+			selectedObject = false;
+			break;
+
+	}
+		
+}
+
+void help()
+{
+	cout << "ROI capture initialized: Press SPACE to save a ROI or D to delete previous ROI." << endl;
+}

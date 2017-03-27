@@ -27,7 +27,10 @@ void main()
 
 	Mat cell = imread("C:/Users/pey_l/OneDrive/Imágenes/roland_geraerts_3.jpg",CV_LOAD_IMAGE_GRAYSCALE);
 	//hog.getBlockHistogram(cell);
-	hog->getHOG(cell);
+	bool abort;
+	//hog->getHOG(cell);
+	//hog->getROI(cell,abort);
+	hog->beginTraining("C:/Users/pey_l/OneDrive/Imágenes/");
 	
 	//cell.convertTo(cell, CV_32F, 1 / 255.0);
 	Mat gx, gy;
