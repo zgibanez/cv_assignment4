@@ -1,4 +1,4 @@
-#include "HOGClass.h"
+#include "trainer.h"
 #include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -22,16 +22,18 @@ void main()
 	}*/
 	
 	//Calculate gradients gx and gy
-	HOG* hog = new HOG();
+	Mat image = imread("C:/Users/Juan/Desktop/1.jpg");
+	Trainer trainer = Trainer();
 
 
-	Mat cell = imread("C:/Users/pey_l/OneDrive/Imágenes/roland_geraerts_3.jpg",CV_LOAD_IMAGE_GRAYSCALE);
+	//Mat cell = imread("C:/Users/pey_l/OneDrive/Imágenes/roland_geraerts_3.jpg",CV_LOAD_IMAGE_GRAYSCALE);
 	//hog.getBlockHistogram(cell);
 	bool abort;
 	//hog->getHOG(cell);
 	//hog->getROI(cell,abort);
-	hog->beginTraining("C:/Users/pey_l/OneDrive/Imágenes/");
-	
+	//trainer.buildROISet("dataset\\positive_training\\");
+	trainer.buildHOGSet("dataset\\roi\\");
+	/*
 	//cell.convertTo(cell, CV_32F, 1 / 255.0);
 	Mat gx, gy;
 	Sobel(cell, gx, CV_32F, 1, 0, 1);
@@ -46,5 +48,5 @@ void main()
 	imshow("TEST",test);
 	waitKey();
 	
-
+	*/
 }

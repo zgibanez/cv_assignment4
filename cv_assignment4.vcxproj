@@ -113,11 +113,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="HOGClass.cpp" />
+    <ClCompile Include="hog.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="trainer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HOGClass.h" />
+    <ClInclude Include="hog.h" />
+    <ClInclude Include="trainer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
