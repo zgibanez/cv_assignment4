@@ -40,7 +40,7 @@ void HOG::setBinValues()
 		binLimits.at<float>(0, i) = degreesPerBin*i;
 	}
 
-	cout << "Bin values are: " << binLimits << endl;
+	//cout << "Bin values are: " << binLimits << endl;
 	binValues = binLimits;
 	binSize = degreesPerBin;
 }
@@ -290,8 +290,6 @@ Mat HOG::concatNormalizedCellHistograms(vector<vector<Mat>> nch)
 {
 	Mat histList = nch[0][0].clone();
 
-	cout << nch[1][0] << endl;
-
 	for (int m = 0; m < CELL_NUMBER_Y; m++)
 	{
 		for (int n = 1; n < CELL_NUMBER_X; n++)
@@ -307,7 +305,7 @@ void HOG::drawHistograms(Mat image, vector<vector<Mat>> histograms)
 {
 	Mat display = image.clone();
 	cvtColor(display, display, COLOR_GRAY2BGR);
-	namedWindow("HISTOGRAMS", WINDOW_NORMAL);
+	//namedWindow("HISTOGRAMS", WINDOW_NORMAL);
 	Point p1, p2;
 	float dX, dY;
 	float P = 50.0f; //to enlage arrows 

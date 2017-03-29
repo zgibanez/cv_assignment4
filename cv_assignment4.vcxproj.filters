@@ -24,12 +24,24 @@
     <ClCompile Include="trainer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="svm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tester.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hog.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="trainer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="svm.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="tester.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

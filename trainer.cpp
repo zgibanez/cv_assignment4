@@ -16,6 +16,7 @@ using namespace cv;
 Trainer::Trainer()
 {
 	hog = HOG();
+	svm = SVM();
 }
 
 //Destructor
@@ -23,6 +24,14 @@ Trainer::~Trainer()
 {
 }
 // Training functions
+
+SVM Trainer::getTrainedSVM()
+{
+	if (svm.getSvm()->isTrained())
+		return svm;
+	else
+		cout << "SVM not trained yet" << endl;
+}
 
 void Trainer::buildROISet(string filePath)
 {
@@ -169,8 +178,8 @@ vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 	for (int i = 0; i < ROIs.size(); i++)
 	{
 		//FIX: SUBSTRING NAME
-		string roiName = "dataset\\roi\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".pgm";
-		string roiNamejpg = "dataset\\roi\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
+		string roiName = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".pgm";
+		string roiNamejpg = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
 
 		cout << roiName << endl;
 
@@ -179,14 +188,14 @@ vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 	}
 }
 
-void Trainer::buildHOGSet(string imgDir)
+void Trainer::buildHOGSet(string imgDir, string setName)
 {
 	vector<String> fileNames;
-	FileStorage fs(HOG_FILE, FileStorage::WRITE);
+	FileStorage fs(setName+"_hog.xml", FileStorage::WRITE);
 
 	//Get the list of files
 	glob(imgDir, fileNames);
-
+	int j = 0;
 	for (int i = 0; i < fileNames.size(); i++)
 	{
 		if (fileNames[i].find(".jpg") != std::string::npos)
@@ -194,11 +203,49 @@ void Trainer::buildHOGSet(string imgDir)
 		//If it's a PNG or a PGM
 		Mat currentImage = imread(fileNames[i], CV_LOAD_IMAGE_GRAYSCALE);
 		Mat currentHog = hog.getHOG(currentImage);
-		fs << "hog_"+ fileNames[i].substr(fileNames[i].find_last_of("\\") + 1, abs(fileNames[i].size() - (fileNames[i].find_last_of("\\") + 1)) - 4) <<  currentHog;
+		fs << "hog_"+to_string(j++) << currentHog;
 	}
 
 	fs.release();
 }
+
+void Trainer::train(int sample_size)
+{
+	Mat features, labels = Mat(Size(1,sample_size*2),CV_32S);
+	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml",10,sample_size);
+	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 20,sample_size);
+
+	vconcat(positive_sample, negative_sample, features);
+	for (int i = 0; i < sample_size * 2; i++)
+		labels.at<int>(i, 0) = i < sample_size ? 1 : -1;
+
+	cout << "FEATURES: type " << features.type() << " SIZE " << features.cols << " " << features.rows << endl;
+	cout << "FEATURES: type " << labels.type() << " SIZE " << labels.cols << " " << labels.rows << endl;
+	cout << labels << endl;
+
+	svm.setParams(ml::SVM::C_SVC, ml::SVM::POLY, 3);
+	svm.getSvm()->train(features, ml::ROW_SAMPLE ,labels);
+
+	svm.getSvm()->save("trained_svm.xml");
+}
+
+Mat Trainer::takeHOGSampleFromFile(string filename, int offset, int size)
+{
+	FileStorage fs(filename, FileStorage::READ);
+	Mat col, row;
+	fs["hog_" + to_string((offset))] >> col;
+	transpose(col, row);
+	Mat sample = row;
+
+	for (int i = 1; i < size; i++) {
+		fs["hog_" + to_string((offset + i))] >> col;
+		transpose(col, row);
+		vconcat(sample, row, sample);
+	}
+
+	return sample;
+}
+
 // Function for handling mouse events
 void onMouse(int event, int x, int y, int flags, void *userdata)
 
@@ -239,4 +286,3 @@ void help()
 {
 	cout << "ROI capture initialized: Press SPACE to save a ROI or D to delete previous ROI." << endl;
 }
-
