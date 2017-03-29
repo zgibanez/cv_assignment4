@@ -1,6 +1,8 @@
 #include "hog.h"
 #include "svm.h"
 
+#define SAMPLE_NUMBER 50
+
 //GUI functions
 void onMouse(int event, int x, int y, int flags, void *userdata);
 void help();
@@ -22,4 +24,5 @@ class Trainer
 		cv::Mat Trainer::takeHOGSampleFromFile(std::string filename,int offset,int size);
 		void Trainer::train(int sample_size);
 		//return the trained SVM
+		float Trainer::crossValidation(int fold_number, double c, double nu, int degree);
 };

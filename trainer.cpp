@@ -178,12 +178,12 @@ vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 	for (int i = 0; i < ROIs.size(); i++)
 	{
 		//FIX: SUBSTRING NAME
-		string roiName = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".pgm";
+		//string roiName = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".pgm";
 		string roiNamejpg = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
 
-		cout << roiName << endl;
+		//cout << roiName << endl;
 
-		imwrite(roiName, imageCopy(ROIs[i]));
+		//imwrite(roiName, imageCopy(ROIs[i]));
 		imwrite(roiNamejpg, imageCopy(ROIs[i]));
 	}
 }
@@ -198,8 +198,7 @@ void Trainer::buildHOGSet(string imgDir, string setName)
 	int j = 0;
 	for (int i = 0; i < fileNames.size(); i++)
 	{
-		if (fileNames[i].find(".jpg") != std::string::npos)
-			continue;
+	
 		//If it's a PNG or a PGM
 		Mat currentImage = imread(fileNames[i], CV_LOAD_IMAGE_GRAYSCALE);
 		Mat currentHog = hog.getHOG(currentImage);
@@ -223,10 +222,82 @@ void Trainer::train(int sample_size)
 	cout << "FEATURES: type " << labels.type() << " SIZE " << labels.cols << " " << labels.rows << endl;
 	cout << labels << endl;
 
-	svm.setParams(ml::SVM::C_SVC, ml::SVM::POLY, 3);
+	svm.setParams(1.0,0.5,3);
 	svm.getSvm()->train(features, ml::ROW_SAMPLE ,labels);
 
 	svm.getSvm()->save("trained_svm.xml");
+}
+
+float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
+{
+	int fold_size = SAMPLE_NUMBER / fold_number;
+	Mat features, labels = Mat(Size(1, SAMPLE_NUMBER * 2), CV_32S);
+	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml", 0, SAMPLE_NUMBER);
+	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 0, SAMPLE_NUMBER);
+	Mat pos_label = Mat::ones(Size(1, 1), CV_32S);
+	Mat neg_label = pos_label.clone();
+	neg_label.at<int>(0, 0) = -1;
+
+
+	vconcat(positive_sample, negative_sample, features);
+	for (int i = 0; i < SAMPLE_NUMBER * 2; i++)
+		labels.at<int>(i, 0) = i < SAMPLE_NUMBER ? 1 : -1;
+
+	float accuracy=0.0f;
+
+	for (int fold = 0; fold < fold_number; fold++)
+	{
+		Mat training_sample = Mat::zeros(Size(features.cols, 1), features.type());
+		Mat training_labels = Mat::zeros(Size(1, 1), labels.type());
+		Mat validation_sample = training_sample.clone();
+		Mat validation_labels = training_labels.clone();
+		for (int sample = 0; sample < SAMPLE_NUMBER; sample++)
+		{
+			if (sample < fold * fold_size || sample >= (fold + 1)* fold_size)
+			{
+				vconcat(training_sample, positive_sample.row(sample), training_sample);
+				vconcat(training_labels, pos_label, training_labels);
+				vconcat(training_sample, negative_sample.row(sample), training_sample);
+				vconcat(training_labels, neg_label, training_labels);
+			}
+			else
+			{
+				vconcat(validation_sample, positive_sample.row(sample), validation_sample);
+				vconcat(validation_labels, pos_label, validation_labels);
+				vconcat(validation_sample, negative_sample.row(sample), validation_sample);
+				vconcat(validation_labels, neg_label, validation_labels);
+			}
+		}
+
+		Mat ts = training_sample.rowRange(1, training_sample.rows);
+		Mat tl = training_labels.rowRange(1, training_labels.rows);
+		Mat vs = validation_sample.rowRange(1, validation_sample.rows);
+		Mat vl = validation_labels.rowRange(1, validation_labels.rows);
+
+		svm.setParams(c, nu, degree);
+		svm.getSvm()->train(ts, ml::ROW_SAMPLE, tl);
+
+		float fold_accuracy = 0.0f;
+		float hitCount = 0;
+		int response;
+		//cout << vl << endl;
+		for (int s = 0; s < fold_size; s++)
+		{
+			response = svm.getSvm()->predict(vs.row(s));
+			cout << "PREDICTED: " << response << "  REAL LABEL: " << vl.at<int>(s, 0) << endl;
+			if (response == vl.at<int>(s, 0))
+				hitCount++;
+		}
+		fold_accuracy = (float)hitCount / (float)fold_size;
+		cout << "Fold " << fold << " accuracy: " << fold_accuracy << endl;
+		accuracy += fold_accuracy;
+	}
+
+	accuracy /= (float)fold_number;
+
+	cout << "Accuracy for C = " << c << "and Learning rate = " << nu << " : " << accuracy << endl;
+
+	return accuracy;
 }
 
 Mat Trainer::takeHOGSampleFromFile(string filename, int offset, int size)
