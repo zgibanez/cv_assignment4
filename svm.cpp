@@ -14,7 +14,7 @@ void SVM::setParams(double c, double nu, int degree)
 	machine->setKernel(ml::SVM::POLY);
 	machine->setGamma(3);
 	machine->setDegree(degree);
-	machine->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 100, 1e-6));
+	machine->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 10000, 1e-6));
 
 	machine->setC(c);
 	machine->setNu(nu);

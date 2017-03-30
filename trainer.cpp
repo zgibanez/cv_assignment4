@@ -211,8 +211,8 @@ void Trainer::buildHOGSet(string imgDir, string setName)
 void Trainer::train(int sample_size)
 {
 	Mat features, labels = Mat(Size(1,sample_size*2),CV_32S);
-	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml",10,sample_size);
-	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 20,sample_size);
+	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml",5,sample_size);
+	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 5,sample_size);
 
 	vconcat(positive_sample, negative_sample, features);
 	for (int i = 0; i < sample_size * 2; i++)
@@ -220,7 +220,6 @@ void Trainer::train(int sample_size)
 
 	cout << "FEATURES: type " << features.type() << " SIZE " << features.cols << " " << features.rows << endl;
 	cout << "FEATURES: type " << labels.type() << " SIZE " << labels.cols << " " << labels.rows << endl;
-	cout << labels << endl;
 
 	svm.setParams(1.0,0.5,3);
 	svm.getSvm()->train(features, ml::ROW_SAMPLE ,labels);
@@ -284,12 +283,12 @@ float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
 		for (int s = 0; s < fold_size; s++)
 		{
 			response = svm.getSvm()->predict(vs.row(s));
-			cout << "PREDICTED: " << response << "  REAL LABEL: " << vl.at<int>(s, 0) << endl;
+			//cout << "PREDICTED: " << response << "  REAL LABEL: " << vl.at<int>(s, 0) << endl;
 			if (response == vl.at<int>(s, 0))
 				hitCount++;
 		}
 		fold_accuracy = (float)hitCount / (float)fold_size;
-		cout << "Fold " << fold << " accuracy: " << fold_accuracy << endl;
+		//cout << "Fold " << fold << " accuracy: " << fold_accuracy << endl;
 		accuracy += fold_accuracy;
 	}
 
