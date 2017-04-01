@@ -43,9 +43,13 @@ void main()
 	tester.setSVM(trainer.getTrainedSVM());
 	//tester.test("dataset\\testing\\");
 
-	Mat img = imread("1.jpg", IMREAD_GRAYSCALE);
+	Mat img = imread("5.jpg", IMREAD_GRAYSCALE);
 	//cout << a.rows << endl;
-	tester.getHeatMap(img,true);
+	vector<Match> results = tester.getPositiveMatches(img,false);
+	//tester.drawPositiveMatchBB(results, img.clone());
+	vector<Match> matches = tester.applyNMS(results);
+
+	tester.drawPositiveMatchBB(matches, img);
 
 	return;
 }
