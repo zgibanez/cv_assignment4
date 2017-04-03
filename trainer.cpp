@@ -5,7 +5,6 @@
 #include <opencv2/core/types_c.h>
 #include <opencv2/imgproc.hpp>
 #include <cassert>
-#include <iostream>
 #include <fstream>
 #include <cmath>
 #include <opencv2/highgui/highgui.hpp>
@@ -179,6 +178,7 @@ vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 	{
 		//FIX: SUBSTRING NAME
 		//string roiName = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".pgm";
+		//string roiNamejpg = "dataset\\roi\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
 		string roiNamejpg = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
 
 		//cout << roiName << endl;
@@ -210,23 +210,22 @@ void Trainer::buildHOGSet(string imgDir, string setName)
 
 void Trainer::train(int sample_size)
 {
-	Mat features, labels = Mat(Size(1,sample_size*2),CV_32S);
-	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml",5,sample_size);
-	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 5,sample_size);
+	Mat features, labels = Mat(Size(1,sample_size*4),CV_32S);
+	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml",0,sample_size);
+	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 0,sample_size*3);
 
 	vconcat(positive_sample, negative_sample, features);
-	for (int i = 0; i < sample_size * 2; i++)
+	for (int i = 0; i < features.rows; i++)
 		labels.at<int>(i, 0) = i < sample_size ? 1 : -1;
 
 	cout << "FEATURES: type " << features.type() << " SIZE " << features.cols << " " << features.rows << endl;
 	cout << "FEATURES: type " << labels.type() << " SIZE " << labels.cols << " " << labels.rows << endl;
 
-	svm.setParams(1.0,0.5,3);
 	svm.getSvm()->train(features, ml::ROW_SAMPLE ,labels);
 
 	svm.getSvm()->save("trained_svm.xml");
 }
-
+/*
 float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
 {
 	int fold_size = SAMPLE_NUMBER / fold_number;
@@ -297,6 +296,86 @@ float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
 	cout << "Accuracy for C = " << c << "and Learning rate = " << nu << " : " << accuracy << endl;
 
 	return accuracy;
+}*/
+
+float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
+{
+	int pos_fold_size = SAMPLE_NUMBER / fold_number;
+	int neg_fold_size = SAMPLE_NUMBER * 2 / fold_number;
+	//Mat features, labels = Mat(Size(1, SAMPLE_NUMBER * 2), CV_32S);
+	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml", 0, SAMPLE_NUMBER);
+	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 0, SAMPLE_NUMBER*2);
+	Mat pos_label = Mat::ones(Size(1, 1), CV_32S);
+	Mat neg_label = pos_label.clone();
+	neg_label.at<int>(0, 0) = -1;
+
+	float accuracy = 0.0f;
+
+	//Try each fold as validation and all others as training set
+	for (int fold = 0; fold < fold_number; fold++)
+	{
+		Mat training_sample = Mat::zeros(Size(positive_sample.cols, 1), positive_sample.type());
+		Mat training_labels = Mat::zeros(Size(1, 1), CV_32S);
+		Mat validation_sample = training_sample.clone();
+		Mat validation_labels = training_labels.clone();
+		//Concatenar las positivas
+		for (int sample = 0; sample < SAMPLE_NUMBER; sample++)
+		{
+			if (sample < fold * pos_fold_size || sample >= (fold + 1)* pos_fold_size)
+			{
+				vconcat(training_sample, positive_sample.row(sample), training_sample);
+				vconcat(training_labels, pos_label, training_labels);
+			}
+			else
+			{
+				vconcat(validation_sample, positive_sample.row(sample), validation_sample);
+				vconcat(validation_labels, pos_label, validation_labels);
+			}
+		}
+		for (int sample = 0; sample < SAMPLE_NUMBER*2; sample++)
+		{
+			if (sample < fold * neg_fold_size || sample >= (fold + 1)* neg_fold_size)
+			{
+				vconcat(training_sample, negative_sample.row(sample), training_sample);
+				vconcat(training_labels, neg_label, training_labels);
+			}
+			else
+			{
+				vconcat(validation_sample, negative_sample.row(sample), validation_sample);
+				vconcat(validation_labels, neg_label, validation_labels);
+			}
+		}
+
+		Mat ts = training_sample.rowRange(1, training_sample.rows);
+		Mat tl = training_labels.rowRange(1, training_labels.rows);
+		Mat vs = validation_sample.rowRange(1, validation_sample.rows);
+		Mat vl = validation_labels.rowRange(1, validation_labels.rows);
+		//cout << "Rows in training sample: " << ts.rows << "\nRows in validation set: " << vs.rows << endl;
+		svm.setParams(c, nu, degree);
+		svm.getSvm()->train(ts, ml::ROW_SAMPLE, tl);
+
+		float fold_accuracy = 0.0f;
+		float hitCount = 0;
+		int response;
+		cout << vl << endl;
+		for (int s = 0; s < vs.rows; s++)
+		{
+			response = svm.getSvm()->predict(vs.row(s));
+			//cout << "PREDICTED: " << response << "  REAL LABEL: " << vl.at<int>(s, 0) << endl;
+			if (response == vl.at<int>(s, 0))
+				hitCount++;
+		}
+		fold_accuracy = (float)hitCount / (float)(vs.rows);
+		//cout << "Fold " << fold << " accuracy: " << fold_accuracy << endl;
+		accuracy += fold_accuracy;
+	}
+
+	accuracy /= (float)fold_number;
+
+	cout << "Accuracy for degree = "<< degree <<" C = " << c << " and Learning rate = " << nu <<" : " << accuracy << endl;
+
+	return accuracy;
+
 }
 
 Mat Trainer::takeHOGSampleFromFile(string filename, int offset, int size)
@@ -355,4 +434,38 @@ void onMouse(int event, int x, int y, int flags, void *userdata)
 void help()
 {
 	cout << "ROI capture initialized: Press SPACE to save a ROI or D to delete previous ROI." << endl;
+}
+
+void Trainer::setOptimalParameters() 
+{
+	double c = 0.00001;
+	double nu = 0.1;
+	float accuracy, bestAccuracy = 0.0f;
+	double best_c = 0.0f, best_nu = 0.0f;
+	int best_degree = 1;
+	int degree = 1;
+	//for (int degree = 1; degree < 6; degree++)
+	//{
+		for (double c = 0.1; c < 10; c+=0.1)
+		{
+			nu = 0.1;
+			//for (int j = 0; j < 10; j++)
+			//{
+				accuracy = crossValidation(10, c, nu, degree);
+				if (accuracy > bestAccuracy)
+				{
+					best_c = c;
+					best_nu = nu;
+					best_degree = degree;
+					bestAccuracy = accuracy;
+				}
+				//nu += 0.1;
+			//}
+			c *= 10;
+		}
+	//}
+
+	cout << "BEST PARAMETERS are c =  " << best_c << "  nu = " << best_nu << " degree = " << best_degree << endl;
+	cout << "Accuracy for best parameters: " << bestAccuracy << endl;
+	svm.setParams(best_c, best_nu, best_degree);
 }

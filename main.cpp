@@ -9,40 +9,24 @@ using namespace cv;
 
 void main()
 {
-	
-	//Calculate gradients gx and gy
 	Trainer trainer = Trainer();
 
-	//trainer.buildROISet("dataset\\");
+	//trainer.buildROISet("dataset\\positive_training\\");
 	//trainer.buildROISet("dataset\\negative_training\\");
-	trainer.buildHOGSet("dataset\\roi\\","positive");
-	trainer.buildHOGSet("dataset\\roi_n\\","negative");
-	trainer.train(40);
-	/*trainer.crossValidation(5,1,0.5,3);
-	double c = 0.00001;
-	double nu = 0.1;
-	for (int degree = 1; degree < 6; degree++)
-	{
-		c = 0.00001;
-		for (int i = 0; i < 20; i++)
-		{
-			nu = 0.1;
-			for (int j = 0; j < 10; j++)
-			{
-				trainer.crossValidation(5, c, nu, degree);
-				nu += 0.1;
-			}
-			c *= 10;
-		}
-	}*/
+	//trainer.buildHOGSet("dataset\\roi\\","positive");
+	//trainer.buildHOGSet("dataset\\roi_n\\","negative");
+	trainer.setOptimalParameters();
+	trainer.train(50);
+	
 
 
+	
 
 	Tester tester = Tester();
 	tester.loadTSVM("trained_svm.xml");
 	tester.setSVM(trainer.getTrainedSVM());
-	//tester.test("dataset\\testing\\");
-
+	tester.test("dataset\\testing\\");
+	
 	Mat img = imread("5.jpg", IMREAD_GRAYSCALE);
 	//cout << a.rows << endl;
 	vector<Match> results = tester.getPositiveMatches(img,false);
@@ -50,6 +34,6 @@ void main()
 	vector<Match> matches = tester.applyNMS(results);
 
 	tester.drawPositiveMatchBB(matches, img);
-
+	
 	return;
 }

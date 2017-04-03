@@ -1,7 +1,7 @@
 #include "hog.h"
 #include "svm.h"
 
-#define SAMPLE_NUMBER 50
+#define SAMPLE_NUMBER 60
 
 //GUI functions
 void onMouse(int event, int x, int y, int flags, void *userdata);
@@ -9,10 +9,10 @@ void help();
 
 class Trainer
 {
-	HOG hog;
-	SVM svm;
-
 	public:
+		HOG hog;
+		SVM svm;
+
 		Trainer();
 		virtual ~Trainer();
 		SVM Trainer::getTrainedSVM();
@@ -25,4 +25,5 @@ class Trainer
 		void Trainer::train(int sample_size);
 		//return the trained SVM
 		float Trainer::crossValidation(int fold_number, double c, double nu, int degree);
+		void Trainer::setOptimalParameters();
 };
