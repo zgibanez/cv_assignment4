@@ -22,7 +22,7 @@ Tester::~Tester() {}
 
 void Tester::loadTSVM(string svmFile)
 {
-	svm.getSvm()->load(svmFile);
+	svm.setTrainedMachine( ml::SVM::load(svmFile));
 }
 
 void Tester::test(string imgDir)
@@ -80,7 +80,9 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 			}
 			if (show)
 			{
+				cout << "Image scale " << scale;
 				imshow("IM", imageTest);
+				cout << "TES" << imageTest.rows - (WINDOW_HEIGHT) << endl;
 				waitKey(0);
 			}
 			for (float i = 0.0f; i <= imageTest.rows - (WINDOW_HEIGHT); i += OVERLAP_WINDOW*WINDOW_HEIGHT)
@@ -105,7 +107,7 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 						tempResult.x = r.x;
 						tempResult.y = r.y;
 						tempResult.score = abs(dist);
-						//cout << "Scale: " << scale << " X=" << r.x << " Y=" << r.y << " Score=" << abs(dist) << endl;
+						cout << "Scale: " << scale << " X=" << r.x << " Y=" << r.y << " Score=" << abs(dist) << endl;
 						//Store them 
 						results.push_back(tempResult);
 					}
@@ -123,7 +125,7 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 	}
 	
 	vector<Match> final_results = adjustBoundingBoxes(results,image);
-	//drawPositiveMatchBB(final_results, image);
+	drawPositiveMatchBB(final_results, image);
 	return final_results;
 }
 
@@ -217,7 +219,7 @@ vector<Match> Tester::applyNMS(vector<Match> results, Mat image)
 	std::sort(results.begin(),results.end(),compareMatches);
 	for (int i = 0; i < results.size(); i++)
 	{
-		cout << " Score " << results[i].score << endl;
+		//cout << " Score " << results[i].score << endl;
 	}
 
 	nms.push_back(results[0]);
@@ -251,6 +253,7 @@ void Tester::drawPositiveMatchBB(vector<Match> results, Mat image)
 	float scale;
 	float width, height;
 	bool flipped;
+	string scoreText;
 	for (int i = 0; i < results.size(); i++)
 	{
 		/*flipped = results[i].flipped;*/
@@ -261,6 +264,8 @@ void Tester::drawPositiveMatchBB(vector<Match> results, Mat image)
 		y = results[i].y / scale;*/
 		r = Rect(results[i].x, results[i].y, width, height);
 		rectangle(display, r, Scalar(0, 230*results[i].score, 0), 2);
+		scoreText = to_string(results[i].score);
+		putText(display, scoreText, Point(results[i].x, results[i].y), FONT_HERSHEY_COMPLEX, 0.5, Scalar(0, 0, 255));
 	}
 
 	imshow("MATCHES", display);

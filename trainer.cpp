@@ -357,7 +357,7 @@ float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
 		float fold_accuracy = 0.0f;
 		float hitCount = 0;
 		int response;
-		cout << vl << endl;
+		//cout << vl << endl;
 		for (int s = 0; s < vs.rows; s++)
 		{
 			response = svm.getSvm()->predict(vs.row(s));
@@ -444,8 +444,8 @@ void Trainer::setOptimalParameters()
 	double best_c = 0.0f, best_nu = 0.0f;
 	int best_degree = 1;
 	int degree = 1;
-	//for (int degree = 1; degree < 6; degree++)
-	//{
+	for (int degree = 1; degree < 4; degree++)
+	{
 		for (double c = 0.1; c < 10; c+=0.1)
 		{
 			nu = 0.1;
@@ -463,7 +463,7 @@ void Trainer::setOptimalParameters()
 			//}
 			c *= 10;
 		}
-	//}
+	}
 
 	cout << "BEST PARAMETERS are c =  " << best_c << "  nu = " << best_nu << " degree = " << best_degree << endl;
 	cout << "Accuracy for best parameters: " << bestAccuracy << endl;

@@ -7,7 +7,7 @@
 #define DET_WINDOW_H 400
 
 //Are the histogram values signed or not?
-#define HISTOGRAMS_360 false 
+#define HISTOGRAMS_360 true 
 
 // Number of bins in the histogram
 #define BIN_NUMBER 9

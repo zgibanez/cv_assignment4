@@ -13,23 +13,19 @@ void main()
 
 	//trainer.buildROISet("dataset\\positive_training\\");
 	//trainer.buildROISet("dataset\\negative_training\\");
-	//trainer.buildHOGSet("dataset\\roi\\","positive");
-	//trainer.buildHOGSet("dataset\\roi_n\\","negative");
+	trainer.buildHOGSet("dataset\\roi\\","positive");
+	trainer.buildHOGSet("dataset\\roi_n\\","negative");
 	trainer.setOptimalParameters();
 	trainer.train(50);
 	
-
-
-	
-
 	Tester tester = Tester();
-	tester.loadTSVM("trained_svm.xml");
+	//tester.loadTSVM("trained_svm.xml");
 	tester.setSVM(trainer.getTrainedSVM());
-	tester.test("dataset\\testing\\");
+	//tester.test("dataset\\testing\\");
 	
-	Mat img = imread("5.jpg", IMREAD_GRAYSCALE);
+	Mat img = imread("16.pgm", IMREAD_GRAYSCALE);
 	//cout << a.rows << endl;
-	vector<Match> results = tester.getPositiveMatches(img,false);
+	vector<Match> results = tester.getPositiveMatches(img,0);
 	//tester.drawPositiveMatchBB(results, img.clone());
 	vector<Match> matches = tester.applyNMS(results);
 
