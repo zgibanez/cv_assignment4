@@ -225,10 +225,16 @@ vector<vector<Mat>> HOG::normalizeHistograms(vector<vector<Mat>> cellHistograms)
 				vconcat(blockHistogram, cellHistograms[i - 1][j + 1], blockHistogram);
 			}
 
-			//If we are on the bottom-left corner take the X+1, Y-1 cell
+			//If we are on the bottom take the X+1, Y-1 cell
 			if (j + 1 == CELL_NUMBER_Y  && i + 1 != CELL_NUMBER_X)
 			{
 				vconcat(blockHistogram, cellHistograms[i + 1][j - 1], blockHistogram);
+			}
+
+			//If we are on the right take the X-1, Y-1 cell
+			if (j + 1 != CELL_NUMBER_Y && i + 1 == CELL_NUMBER_X)
+			{
+				vconcat(blockHistogram, cellHistograms[i - 1][j + 1], blockHistogram);
 			}
 
 			//If we are on the bottom-right corner take the X-1,Y-1 cell

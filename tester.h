@@ -1,6 +1,6 @@
 #include "trainer.h"
 
-#define OVERLAP_WINDOW 0.1
+#define OVERLAP_WINDOW 0.5
 
 #define WINDOW_WIDTH 130
 #define WINDOW_HEIGHT 100

@@ -212,7 +212,7 @@ void Trainer::train(int sample_size)
 {
 	Mat features, labels = Mat(Size(1,sample_size*4),CV_32S);
 	Mat positive_sample = takeHOGSampleFromFile("positive_hog.xml",0,sample_size);
-	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 0,sample_size*3);
+	Mat negative_sample = takeHOGSampleFromFile("negative_hog.xml", 0,150);
 
 	vconcat(positive_sample, negative_sample, features);
 	for (int i = 0; i < features.rows; i++)
