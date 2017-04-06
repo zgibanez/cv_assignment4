@@ -22,7 +22,7 @@ class Trainer
 		std::vector<cv::Mat> Trainer::getROI(cv::Mat image, bool &abort, std::string fileName);
 		void Trainer::buildHOGSet(std::string imgDir, std::string setName);
 		cv::Mat Trainer::takeHOGSampleFromFile(std::string filename,int offset,int size);
-		void Trainer::train(int sample_size);
+		void Trainer::train(int pos_sample_size, int neg_sample_size, bool saveSVM = false);
 		//return the trained SVM
 		float Trainer::crossValidation(int fold_number, double c, double nu, int degree);
 		void Trainer::setOptimalParameters();

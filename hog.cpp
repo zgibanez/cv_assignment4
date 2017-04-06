@@ -52,10 +52,10 @@ void HOG::setCellDimensions()
 	cellHeight = DET_WINDOW_H / CELL_NUMBER_Y;
 	cellWidth = DET_WINDOW_W / CELL_NUMBER_X;
 
-	if (remainder(DET_WINDOW_H, CELL_NUMBER_Y) != 0 || remainder(DET_WINDOW_W, CELL_NUMBER_X) != 0)
-		cout << "WARNING: Remainder between cell dimensions is not 0. Sliding windows may cause problems" << endl;
+	//if (remainder(DET_WINDOW_H, CELL_NUMBER_Y) != 0 || remainder(DET_WINDOW_W, CELL_NUMBER_X) != 0)
+		//cout << "WARNING: Remainder between cell dimensions is not 0. Sliding windows may cause problems" << endl;
 
-	cout << "CELL WIDTH = " << cellWidth << " CELL HEIGHT = " << cellHeight << endl;
+	//cout << "CELL WIDTH = " << cellWidth << " CELL HEIGHT = " << cellHeight << endl;
 }
 
 Mat HOG::getHOG(Mat image, bool debug)
@@ -63,6 +63,8 @@ Mat HOG::getHOG(Mat image, bool debug)
 	//Resize image so it fits with the planned window dimension
 	Mat imageCopy = image.clone();
 	resize(imageCopy, imageCopy, Size(DET_WINDOW_W, DET_WINDOW_H));
+	GaussianBlur(imageCopy, imageCopy, Size(5, 5), 0);
+
 	if (debug)
 	{
 		imshow("RESIZED IMAGE", imageCopy);

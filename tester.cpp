@@ -25,14 +25,16 @@ void Tester::loadTSVM(string svmFile)
 	svm.setTrainedMachine( ml::SVM::load(svmFile));
 }
 
-void Tester::test(string imgDir)
+void Tester::test(string imgDir, bool returnPR, Mat &PR)
 {
 	vector<String> fileNames;
 
+	cout << "Testing images in " << imgDir << "..." << endl;
 	//Get the list of files
 	glob(imgDir, fileNames);
 	Mat response;
-
+	int truePositive=0, falsePositive=0;
+	int trueNegative=0, falseNegative=0;
 	Mat predicted_label(Size(1,1),CV_32F);
 
 	for (size_t i = 0; i < fileNames.size(); i++)
@@ -40,22 +42,81 @@ void Tester::test(string imgDir)
 		Mat img = imread(fileNames[i], IMREAD_GRAYSCALE);
 		Mat img_hog = hog.getHOG(img);
 		transpose(img_hog, img_hog);
-		cout << img_hog.type() << " cols: " << img_hog.cols << " rows: " << img_hog.rows << endl;
+		//cout << img_hog.type() << " cols: " << img_hog.cols << " rows: " << img_hog.rows << endl;
 		svm.getSvm()->predict(img_hog,response,ml::SVM::RAW_OUTPUT);
-		string answer = response.at<float>(0, 0) < 0.0f ? "yes" : "no";
-		cout << fileNames[i]<<" es una oveja?: " << answer << " Distance " << abs(response.at<float>(0, 0)) << endl;
-		imshow("Imagen", img);
-		waitKey(0);
-		destroyAllWindows();
+		string answer = response.at<float>(0, 0) < POSITIVE_BIAS ? "yes" : "no";
+
+
+		if (returnPR)
+		{
+			bool imageIsPositive = fileNames[i].find("neg") == std::string::npos;
+			
+			bool labelIsPositive = answer == "yes";
+			//Search for "p" in the file name
+			if (imageIsPositive && labelIsPositive)
+			{
+				truePositive++;
+			}
+			else if (!imageIsPositive && !labelIsPositive)
+			{
+				trueNegative++;
+			}
+			else if (!imageIsPositive && labelIsPositive)
+			{
+				falsePositive++;
+			}
+			else if (imageIsPositive && !labelIsPositive)
+			{
+				falseNegative++;
+			}
+
+		}
+		else
+		{
+			cout << fileNames[i] << " es una oveja?: " << answer << " Distance " << abs(response.at<float>(0, 0)) << endl;
+			imshow("Imagen", img);
+			waitKey(0);
+			destroyAllWindows();
+		}
+
+
 	}
-	//svm.getSvm()->predict();
 
+	if (returnPR)
+	{
+		//cout << "Samples: " << truePositive + falsePositive + trueNegative + falseNegative << endl;
+		cout << "True positives: " << truePositive << " False Positives: " << falsePositive << endl;
+		cout << "True negatives: " << trueNegative << " False Negatives: " << falseNegative << endl;
+		float P = (float)truePositive / (float)(truePositive + falsePositive);
+		float R = (float)truePositive / (float)(truePositive + falseNegative);
+		cout << "P = " << P << " R= " << R << endl;
+		PR.at<float>(0, 0) = P;
+		PR.at<float>(0, 1) = R;
+	}
+}
 
+void Tester::detect(Mat image, bool show)
+{
+	cout << "Detecting sheep..." << endl;
+	vector<Match> results = getPositiveMatches(image, show);
+	if (results.empty())
+	{
+		cout << "No sheeps found on this image" << endl;
+		return;
+	}
+
+	if (show)
+		drawPositiveMatchBB(results, image.clone());
+	vector<Match> matches = applyNMS(results);
+	drawPositiveMatchBB(matches, image);
 }
 
 vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 {
 	Rect r = Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	float pHeight =  (float)WINDOW_HEIGHT / (float)image.rows;
+	float pWidth =  (float)WINDOW_WIDTH / (float)image.cols;
+
 	Mat imageCopy;
 	Mat imageTest;
 	Mat tempHist;
@@ -70,14 +131,18 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 	{
 		flipped = !flipped;
 
-		for (float scale = 0.2f; scale < 1.2f; scale += 0.2f)
+		for (float scale = pHeight < pWidth ? pWidth : pHeight; scale < 1.2f; scale += 0.2f)
 		{
 
-			resize(image, imageTest, Size(image.cols*scale, image.rows*scale));
+			resize(image, imageTest, Size((scale)*image.cols, (scale)*image.rows));
+			GaussianBlur(imageTest, imageTest, Size(3, 3), 0.1);
+
 			if (flipped)
 			{
 				flip(imageTest, imageTest,1);
 			}
+			//imshow("IMAGETEST", imageTest);
+			//waitKey(0);
 			if (show)
 			{
 				cout << "Image scale " << scale;
@@ -85,19 +150,18 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 				cout << "TES" << imageTest.rows - (WINDOW_HEIGHT) << endl;
 				waitKey(0);
 			}
-			for (float i = 0.0f; i <= imageTest.rows - (WINDOW_HEIGHT); i += OVERLAP_WINDOW*WINDOW_HEIGHT)
+			for (float i = 0.0f; i <= imageTest.rows - (WINDOW_HEIGHT); i += WINDOW_STEP*WINDOW_HEIGHT)
 			{
-				for (float j = 0.0f; j <= (imageTest.cols - (WINDOW_WIDTH)); j += OVERLAP_WINDOW*WINDOW_WIDTH)
+				for (float j = 0.0f; j <= (imageTest.cols - (WINDOW_WIDTH)); j += WINDOW_STEP*WINDOW_WIDTH)
 				{
 					r.x = j;
 					r.y = i;
 
 					tempHist = hog.getHOG(imageTest(r));
-					//TODO: PENSAR EN DONDE PONER EL TRANSPOSE PARA NO TENER QUE HACERLO REPETIDAMENTE
 					transpose(tempHist, tempHist);
 					svm.getSvm()->predict(tempHist, rawOut, ml::SVM::RAW_OUTPUT);
 					dist = rawOut.at<float>(0, 0);
-					if (dist < 0)
+					if (dist < 0.0f - POSITIVE_BIAS)
 					{
 						//vector<float> tempResult(5);
 						Match tempResult;
@@ -107,7 +171,8 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 						tempResult.x = r.x;
 						tempResult.y = r.y;
 						tempResult.score = abs(dist);
-						cout << "Scale: " << scale << " X=" << r.x << " Y=" << r.y << " Score=" << abs(dist) << endl;
+						if(show)
+							cout << "Possible sheep at: X = " << r.x << " Y = " << r.y << " Score = " << abs(dist) << endl;
 						//Store them 
 						results.push_back(tempResult);
 					}
@@ -125,7 +190,6 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 	}
 	
 	vector<Match> final_results = adjustBoundingBoxes(results,image);
-	drawPositiveMatchBB(final_results, image);
 	return final_results;
 }
 
@@ -221,7 +285,7 @@ vector<Match> Tester::applyNMS(vector<Match> results, Mat image)
 	{
 		//cout << " Score " << results[i].score << endl;
 	}
-
+	cout << "RESULTS SIZE " << results.size() << endl;
 	nms.push_back(results[0]);
 
 	for (int i = 1; i < results.size(); i++)
@@ -229,7 +293,7 @@ vector<Match> Tester::applyNMS(vector<Match> results, Mat image)
 		bool t = false;
 		for (int j = 0; j < nms.size(); j++)
 		{
-			if (getCollision(results[i], nms[j], image) > 0.2)
+			if (getCollision(results[i], nms[j], image) > MAXIMUM_OVERLAP)
 			{
 				//cout << "COLISION SUPERO 40% " << endl;
 				t = true;
@@ -254,6 +318,7 @@ void Tester::drawPositiveMatchBB(vector<Match> results, Mat image)
 	float width, height;
 	bool flipped;
 	string scoreText;
+
 	for (int i = 0; i < results.size(); i++)
 	{
 		/*flipped = results[i].flipped;*/

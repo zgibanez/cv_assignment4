@@ -115,12 +115,14 @@
   <ItemGroup>
     <ClCompile Include="hog.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="performance.cpp" />
     <ClCompile Include="svm.cpp" />
     <ClCompile Include="tester.cpp" />
     <ClCompile Include="trainer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="hog.h" />
+    <ClInclude Include="performance.h" />
     <ClInclude Include="svm.h" />
     <ClInclude Include="tester.h" />
     <ClInclude Include="trainer.h" />

@@ -11,7 +11,7 @@ class SVM
 		SVM();
 		virtual ~SVM();
 
-		void setParams(double c, double nu, int degree);
+		void setParams(double c, double nu, int degree, int kernel = cv::ml::SVM::POLY);
 		cv::Ptr<cv::ml::SVM> getSvm()
 		{
 			return machine;

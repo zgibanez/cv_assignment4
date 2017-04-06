@@ -3,8 +3,8 @@
 #include <vector>
 
 // Window dimensions
-#define DET_WINDOW_W 500
-#define DET_WINDOW_H 400
+#define DET_WINDOW_W 440
+#define DET_WINDOW_H 320
 
 //Are the histogram values signed or not?
 #define HISTOGRAMS_360 true 
