@@ -9,35 +9,44 @@ using namespace cv;
 
 void main()
 {
-	//TODO
-	//2) Probar threshold negativo para asegurar que se tengan ovejas
-	//3) Petar al trainer con negativas
-	//4) Investigar las dimensiones de una oveja
-	//5) En seleccion de ROI, investigar el porcentaje de imagen ocupado por la oveja(máximo, mínimo y promedio)
-	//7) Hacer funcion para area of intersection (IoU)
 
-	//writeAUC();
-
-	Trainer trainer = Trainer();
-
+	//STEP 1: Build positive and negative data.
 	//trainer.buildROISet("dataset\\positive_training\\");
-	//trainer.buildROISet("dataset\\negative_training\\");
-	trainer.buildHOGSet("dataset\\roi\\","positive");
-	trainer.buildHOGSet("dataset\\roi_n\\","negative");
-	
-	trainer.setOptimalParameters();
-	//trainer.svm.setParams(1000, 0.1, 1, ml::SVM::LINEAR);
-	trainer.train(60,140,true);
-	
+	//trainer.buildROISet("dataset\\positive_training\\", "dataset\\roi_n\\");
+		
+		//Locate sheep in testing images
+		//getObjectLocations("nms_test//");
+
+	//STEP 2: Extract descriptors from positive and negative data
+	//trainer.buildHOGSet("dataset\\roi\\","positive");
+	//trainer.buildHOGSet("dataset\\roi_n\\","negative");
+
+	//STEP 3: Get best parameters possible with 10-fold cross validation
+	Trainer trainer = Trainer();
+	trainer.setOptimalParameters(true);
+
+	//STEP 4 A: Train the SVM with best parameters obtained
+	trainer.train(60, 300, true);
 	Tester tester = Tester();
-	tester.loadTSVM("trained_svm.xml");
-	//tester.setSVM(trainer.getTrainedSVM());
+	tester.setSVM(trainer.getTrainedSVM());
+
+	//STEP 4 B: Alternatively, load a previously stored SVM
+	//tester.loadTSVM("trained_svm.xml");
+
+	//STEP 5: Test single images
 	//tester.test("dataset\\testing\\");
+
+	//STEP 6 A: Test object detection (set of images)
+
+		//False positives per window
+		getFPPW("nms_test//");
+
+		//Precision-Recall curve (with number of samples)
+		writeAUC(40, 200);
 	
-	Mat img = imread("30.pgm", IMREAD_GRAYSCALE);
-	tester.detect(img);
-	//cout << a.rows << endl;
-	
-	
+	//STEP 6 B: Test object detection (single image)
+	Mat img = imread("nms_test//5.pgm", IMREAD_GRAYSCALE);
+	tester.detect(img,1);
+
 	return;
 }

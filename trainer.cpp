@@ -32,13 +32,16 @@ SVM Trainer::getTrainedSVM()
 		cout << "SVM not trained yet" << endl;
 }
 
-void Trainer::buildROISet(string filePath)
+//This function calls the ROI selectioning tool to crop images from a folder.
+// The second argument is the folder where the cropped images will be stored.
+void Trainer::buildROISet(string filePath, string destinationFolder)
 {
-	vector<String> fileNames;
 
 	//Get the list of files
+	vector<String> fileNames;
 	glob(filePath, fileNames);
 	Mat src;
+	bool abort = false;
 
 	for (size_t i = 0; i < fileNames.size(); i++)
 	{
@@ -51,17 +54,27 @@ void Trainer::buildROISet(string filePath)
 			continue;
 		}
 
-		//
-		bool abort;
+		//Call the ROI selection tool
 		cout << "Commencing ROI selection of file " << fileNames[i] << endl;
-		vector<Mat> ROI = getROI(src, abort, fileNames[i]);
+		vector<Mat> ROIs = getROI(src, abort, fileNames[i]);
+
+		//If the user quitted, exit the process
+		if (abort) break;
+
+		//Otherwise, store the images in the folder
+		for (int j = 0; j < ROIs.size(); j++)
+		{
+			//string roiNamejpg = "dataset\\roi\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
+			string roiNamejpg = destinationFolder + fileNames[i].substr(fileNames[i].find_last_of("\\") + 1, abs(fileNames[i].size() - (fileNames[i].find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(j) + "X.jpg";
+			cout << roiNamejpg << endl;
+			imwrite(roiNamejpg, ROIs[j]);
+		}
 	}
 
 	cout << "ROI Set finished" << endl;
 }
 
-// Allows the user to select rectangles from the image
-// and calculate their histograms.
+// Allows the user to select rectangles from the image.
 vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 {
 	// Show commands
@@ -148,10 +161,17 @@ vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 			esc = true;
 			break;
 
+			//Q: Quit selecting ROIs
+		case (int)('q') :
+			abort = true;
+			break;
+
+			//H: Lower Scale
 		case (int)('h') :
 			if(scale>1) scale--;
 			break;
 
+			//J: Increase scale
 		case (int)('j') :
 			scale++;
 			break;
@@ -166,6 +186,7 @@ vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 	setMouseCallback(window, NULL, NULL);
 	destroyWindow(window);
 
+	// Retrieve the image scale and the flip state
 	imageCopy = image.clone();
 	resize(imageCopy, imageCopy, Size(imageCopy.cols * scale, imageCopy.rows * scale));
 	if (flipped)
@@ -174,20 +195,112 @@ vector<Mat> Trainer::getROI(Mat image, bool &abort, string fileName)
 		flip(flipCopy, imageCopy, 1);
 	}
 
+	//Return all the ROIs cropped
+	vector<Mat> croppedImages;
 	for (int i = 0; i < ROIs.size(); i++)
 	{
-		//FIX: SUBSTRING NAME
-		//string roiName = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".pgm";
-		//string roiNamejpg = "dataset\\roi\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
-		string roiNamejpg = "dataset\\roi_n\\" + fileName.substr(fileName.find_last_of("\\") + 1, abs(fileName.size() - (fileName.find_last_of("\\") + 1)) - 4) + "_roi_" + to_string(i) + ".jpg";
-
-		//cout << roiName << endl;
-
-		//imwrite(roiName, imageCopy(ROIs[i]));
-		imwrite(roiNamejpg, imageCopy(ROIs[i]));
+		croppedImages.push_back(image(ROIs[i]));
 	}
+	return croppedImages;
 }
 
+//Overrided function to return rectangle locations instead of the images.
+// This rectangles are used for FPPW.
+Mat Trainer::getROI(Mat image)
+{
+	// Show commands
+	help();
+
+	// Flag to determine if we finished selecting ROIs
+	bool esc = false;
+
+	// Create a window to use mouse functions 
+	string window = "Select ROI(s)";
+	namedWindow(window, WINDOW_AUTOSIZE);
+
+	// Vector of rectangles
+	vector<Rect> ROIs;
+	Rect ROI = Rect();
+	setMouseCallback(window, onMouse, &ROI);
+
+	Mat imageCopy;
+	Mat flipCopy;
+
+	int key;
+
+	for (;;)
+	{
+		//Image clone to visualize ROI
+		imageCopy = image.clone();
+		cvtColor(imageCopy, imageCopy, COLOR_GRAY2BGR);
+
+		//Visualize actual ROI
+		rectangle(imageCopy, ROI, Scalar(0, 255, 0), 2);
+
+		//Visualize previous Rects
+		if (!ROIs.empty())
+		{
+			for (size_t i = 0; i < ROIs.size(); i++)
+			{
+				rectangle(imageCopy, ROIs[i], Scalar(0, 200, 0), 2);
+			}
+		}
+		imshow(window, imageCopy);
+
+		//If user presses SPACE we will save the image
+		key = waitKey(20);
+		switch (key)
+		{
+			//No input
+		case -1:
+			continue;
+
+			//SPACE: Save ROI 
+		case 32:
+			ROIs.push_back(ROI);
+			cout << "ROI saved." << endl;
+			break;
+
+			//D: Delete previous ROI
+		case (int)('d') :
+			if (!ROIs.empty())
+			{
+				ROIs.pop_back();
+				cout << "Last ROI erased" << endl;
+			}
+			else cout << "There are no ROIs saved." << endl;
+			break;
+
+			//ESC: Go to next image
+		case (int)('n') :
+			esc = true;
+			break;
+
+		}
+
+		//If ESC was pushed finish
+		if (esc) break;
+	}
+
+	// Impede any more inputs 
+	setMouseCallback(window, NULL, NULL);
+	destroyWindow(window);
+
+	// Store ROIs location in Mat
+	Mat locationsROI = Mat::zeros(Size(4,ROIs.size()), CV_32F);
+	for (int i = 0; i < ROIs.size(); i++)
+	{
+		locationsROI.at<float>(i, 0) = ROIs[i].x;
+		locationsROI.at<float>(i, 1) = ROIs[i].y;
+		locationsROI.at<float>(i, 2) = ROIs[i].width;
+		locationsROI.at<float>(i, 3) = ROIs[i].height;
+
+	}
+	//cout << locationsROI << endl;
+	return locationsROI;
+}
+
+//Computes the HoG descriptors of all images in a directory and stores them in a .xml file.
 void Trainer::buildHOGSet(string imgDir, string setName)
 {
 	vector<String> fileNames;
@@ -201,7 +314,7 @@ void Trainer::buildHOGSet(string imgDir, string setName)
 	
 		//If it's a PNG or a PGM
 		Mat currentImage = imread(fileNames[i], CV_LOAD_IMAGE_GRAYSCALE);
-		Mat currentHog = hog.getHOG(currentImage);
+		Mat currentHog = hog.getHOG(currentImage, false);
 		fs << "hog_"+to_string(j++) << currentHog;
 	}
 
@@ -220,12 +333,11 @@ void Trainer::train(int pos_sample_size, int neg_sample_size, bool saveSVM)
 	for (int i = 0; i < features.rows; i++)
 		labels.at<int>(i, 0) = i < pos_sample_size ? 1 : -1;
 
-	//cout << "FEATURES: type " << features.type() << " SIZE " << features.cols << " " << features.rows << endl;
-	//cout << "LABELS: type " << labels.type() << " SIZE " << labels.cols << " " << labels.rows << endl;
-
 	svm.getSvm()->train(features, ml::ROW_SAMPLE ,labels);
 
-	cout << "SVM trained" << endl;
+	
+	if(svm.getSvm()->isTrained()) cout << "SVM trained" << endl;
+	else cout << "Error: SVM not trained. " << endl;
 
 	if (saveSVM)
 	{
@@ -235,6 +347,7 @@ void Trainer::train(int pos_sample_size, int neg_sample_size, bool saveSVM)
 		
 }
 
+// Perform a K-fold cross validation of the data. 
 float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
 {
 	int pos_fold_size = SAMPLE_NUMBER / fold_number;
@@ -288,7 +401,10 @@ float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
 		Mat vs = validation_sample.rowRange(1, validation_sample.rows);
 		Mat vl = validation_labels.rowRange(1, validation_labels.rows);
 		//cout << "Rows in training sample: " << ts.rows << "\nRows in validation set: " << vs.rows << endl;
-		svm.setParams(c, nu, degree);
+		//LINEAR KERNEL
+		//svm.setParams(c, nu, degree);
+		//POLY KERNEL
+		svm.setParams(c, nu, degree,ml::SVM::POLY);
 		svm.getSvm()->train(ts, ml::ROW_SAMPLE, tl);
 
 		float fold_accuracy = 0.0f;
@@ -315,6 +431,8 @@ float Trainer::crossValidation(int fold_number, double c, double nu, int degree)
 
 }
 
+//Retrieves a single HoG histogram of an image.
+//This function is called once per image in buildHOGSet.
 Mat Trainer::takeHOGSampleFromFile(string filename, int offset, int size)
 {
 	FileStorage fs(filename, FileStorage::READ);
@@ -373,7 +491,9 @@ void help()
 	cout << "ROI capture initialized: Press SPACE to save a ROI or D to delete previous ROI." << endl;
 }
 
-void Trainer::setOptimalParameters() 
+// Tries a different combination of parameters.
+// The set that performs best (in terms of accuracy) is selected.
+void Trainer::setOptimalParameters(bool saveParams) 
 {
 	double c = 0.00001;
 	double nu = 0.1;
@@ -404,5 +524,10 @@ void Trainer::setOptimalParameters()
 
 	cout << "BEST PARAMETERS are c =  " << best_c << "  nu = " << best_nu << " degree = " << best_degree << endl;
 	cout << "Accuracy for best parameters: " << bestAccuracy << endl;
-	svm.setParams(best_c, best_nu, best_degree);
+	//svm.setParams(best_c, best_nu, best_degree);
+
+	if (saveParams)
+	{
+			svm.setParams(best_c, best_nu, best_degree, ml::SVM::POLY);
+	}
 }

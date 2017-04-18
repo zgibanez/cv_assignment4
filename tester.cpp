@@ -25,6 +25,13 @@ void Tester::loadTSVM(string svmFile)
 	svm.setTrainedMachine( ml::SVM::load(svmFile));
 }
 
+// Performs Straightforward testing for a single image:
+// 1) Loads images from a folder.
+// 2) Labels them according to their file name.
+// 3) Computes their HOG descriptor
+// 4) Tests them with the saved SVM
+// 5) Output results
+// 6) (Optional) Counts the number of true/false positives and true/false negatives 
 void Tester::test(string imgDir, bool returnPR, Mat &PR)
 {
 	vector<String> fileNames;
@@ -42,7 +49,7 @@ void Tester::test(string imgDir, bool returnPR, Mat &PR)
 		Mat img = imread(fileNames[i], IMREAD_GRAYSCALE);
 		Mat img_hog = hog.getHOG(img);
 		transpose(img_hog, img_hog);
-		//cout << img_hog.type() << " cols: " << img_hog.cols << " rows: " << img_hog.rows << endl;
+
 		svm.getSvm()->predict(img_hog,response,ml::SVM::RAW_OUTPUT);
 		string answer = response.at<float>(0, 0) < POSITIVE_BIAS ? "yes" : "no";
 
@@ -52,7 +59,7 @@ void Tester::test(string imgDir, bool returnPR, Mat &PR)
 			bool imageIsPositive = fileNames[i].find("neg") == std::string::npos;
 			
 			bool labelIsPositive = answer == "yes";
-			//Search for "p" in the file name
+
 			if (imageIsPositive && labelIsPositive)
 			{
 				truePositive++;
@@ -95,10 +102,14 @@ void Tester::test(string imgDir, bool returnPR, Mat &PR)
 	}
 }
 
+//Main function for testing images:
+// 1) gets bounding boxes of positive matches
+// 2) apply NMS to matches
+// 3) shows results
 void Tester::detect(Mat image, bool show)
 {
 	cout << "Detecting sheep..." << endl;
-	vector<Match> results = getPositiveMatches(image, show);
+	vector<Match> results = getPositiveMatches(image, false);
 	if (results.empty())
 	{
 		cout << "No sheeps found on this image" << endl;
@@ -106,11 +117,13 @@ void Tester::detect(Mat image, bool show)
 	}
 
 	if (show)
-		drawPositiveMatchBB(results, image.clone());
+	drawPositiveMatchBB(results, image.clone());
 	vector<Match> matches = applyNMS(results);
 	drawPositiveMatchBB(matches, image);
 }
 
+// Gets list of positive matches in the image.
+// Bool "show" shows the process and returns a message when a match is found.
 vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 {
 	Rect r = Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -193,6 +206,7 @@ vector<Match> Tester::getPositiveMatches(Mat image, bool show)
 	return final_results;
 }
 
+// Corrects all bounding boxes dimentions found in the flipped image and/or different scales. 
 vector<Match> Tester::adjustBoundingBoxes(vector<Match> results,Mat image)
 {
 	vector<Match> adjusted;
@@ -219,11 +233,13 @@ vector<Match> Tester::adjustBoundingBoxes(vector<Match> results,Mat image)
 	return adjusted;
 }
 
+// Returns the match with the highest score
 bool compareMatches(Match i, Match j)
 {
 	return i.score > j.score;
 }
 
+// Gets percentaje of intersection between two matches
 float Tester::getCollision(Match a, Match b, Mat image)
 {
 	//Check if there is collision
@@ -285,7 +301,6 @@ vector<Match> Tester::applyNMS(vector<Match> results, Mat image)
 	{
 		//cout << " Score " << results[i].score << endl;
 	}
-	cout << "RESULTS SIZE " << results.size() << endl;
 	nms.push_back(results[0]);
 
 	for (int i = 1; i < results.size(); i++)

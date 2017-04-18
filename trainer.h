@@ -18,12 +18,14 @@ class Trainer
 		SVM Trainer::getTrainedSVM();
 
 		//Training
-		void Trainer::buildROISet(std::string filePath);
+		void Trainer::buildROISet(std::string filePath, std::string destinationFolder);
 		std::vector<cv::Mat> Trainer::getROI(cv::Mat image, bool &abort, std::string fileName);
+		cv::Mat Trainer::getROI(cv::Mat image);
 		void Trainer::buildHOGSet(std::string imgDir, std::string setName);
 		cv::Mat Trainer::takeHOGSampleFromFile(std::string filename,int offset,int size);
 		void Trainer::train(int pos_sample_size, int neg_sample_size, bool saveSVM = false);
+
 		//return the trained SVM
 		float Trainer::crossValidation(int fold_number, double c, double nu, int degree);
-		void Trainer::setOptimalParameters();
+		void Trainer::setOptimalParameters(bool saveSVM = false);
 };

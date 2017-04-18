@@ -4,7 +4,7 @@
 #define MAXIMUM_OVERLAP 0.2
 #define WINDOW_WIDTH 110
 #define WINDOW_HEIGHT 80
-#define POSITIVE_BIAS 0.4f
+#define POSITIVE_BIAS 0.0f
 
 typedef struct {
 	float scale;

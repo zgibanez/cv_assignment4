@@ -93,7 +93,7 @@ Mat HOG::getHOG(Mat image, bool debug)
 
 
 	//Step X: Draw histograms
-	drawHistograms(imageCopy, normalizedCellHistograms);
+	if (debug)  drawHistograms(imageCopy, normalizedCellHistograms);
 
 	return concatNormalizedCellHistograms(normalizedCellHistograms);
 }
@@ -313,7 +313,7 @@ void HOG::drawHistograms(Mat image, vector<vector<Mat>> histograms)
 {
 	Mat display = image.clone();
 	cvtColor(display, display, COLOR_GRAY2BGR);
-	//namedWindow("HISTOGRAMS", WINDOW_NORMAL);
+	namedWindow("HISTOGRAMS", WINDOW_NORMAL);
 	Point p1, p2;
 	float dX, dY;
 	float P = 50.0f; //to enlage arrows 
@@ -339,8 +339,8 @@ void HOG::drawHistograms(Mat image, vector<vector<Mat>> histograms)
 		}
 	}
 
-	//imshow("HISTOGRAMS", display);
-	//waitKey(0);
-	//destroyWindow("HISTOGRAMS");
+	imshow("HISTOGRAMS", display);
+	waitKey(0);
+	destroyWindow("HISTOGRAMS");
 
 }
